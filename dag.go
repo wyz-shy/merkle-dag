@@ -4,6 +4,17 @@ import (
 	"hash"
 )
 
+type Link struct {
+	Name string
+	Hash []byte
+	Size int
+}
+
+type Object struct {
+	Links []Link
+	Data  []byte
+}
+
 func Add(store KVStore, node Node, h hash.Hash) []byte {
 	if node.Type == "file" {
 		store.Save([]byte("file"), node.Data)
