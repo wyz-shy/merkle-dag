@@ -16,36 +16,22 @@ type Object struct {
 }
 
 func Add(store KVStore, node Node, h hash.Hash) []byte {
-	if node.Type == "file" {
-		store.Save([]byte("file"), node.Data)
-		return hash(node.Data, h)
-	} else if node.Type == "dir" {
-		for _, child := range getDirContents(node) {
-			Add(store, child, h)
+	switch node.Type() {
+	case FILE:
+		fileNode := node.(File)
+		store.Put([]byte("content"), fileNode.Bytes())
+		h.Write(fileNode.Bytes())
+		return h.Sum(nil)
+	case DIR:
+		dirNode := node.(Dir)
+		iterator := dirNode.It()
+		for iterator.Next() {
+			childNode := iterator.Node()
+			childMerkleRoot := Add(store, childNode, h)
+			h.Write(childMerkleRoot)
 		}
-		return hashDirContents(node, h)
+		return h.Sum(nil)
+	default:
+		return nil
 	}
-	return nil 
-}
-
-func hash(data []byte, h hash.Hash) []byte {
-	h.Reset()
-	h.Write(data)
-	return h.Sum(nil)
-}
-
-func getDirContents(dir Node) []Node {
-	return []Node{
-		{Type: "file", Data: []byte("file1")},
-		{Type: "file", Data: []byte("file2")},
-		{Type: "dir", Data: nil},
-	}
-}
-
-func hashDirContents(dir Node, h hash.Hash) []byte {
-	for _, child := range getDirContents(dir) {
-		childHash := Add(store, child, h)
-		h.Write(childHash)
-	}
-	return h.Sum(nil)
 }
